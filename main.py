@@ -139,6 +139,7 @@ def preprocess_df(df, name=""):
     df = df.dropna(subset=['date', 'value'])
     df = df[['date', 'value']].rename(columns={'value': name or 'value'})
     return df
+    
 def plot_normalized_actuals(data_dict, selected_indicators):
     fig = go.Figure()
     
@@ -146,15 +147,18 @@ def plot_normalized_actuals(data_dict, selected_indicators):
         df = data_dict[indicator].copy()
         
         try:
+            # Check which value column exists
+            value_col = 'Actual' if 'Actual' in df.columns else 'value'
+            
             # Min-max normalization to [0, 1]
-            actual_min = df['value'].min()
-            actual_max = df['value'].max()
+            actual_min = df[value_col].min()
+            actual_max = df[value_col].max()
             
             if actual_max == actual_min:
                 st.warning(f"No variation in values for {indicator} - skipping normalization")
                 continue
 
-            normalized = (df['value'] - actual_min) / (actual_max - actual_min)
+            normalized = (df[value_col] - actual_min) / (actual_max - actual_min)
 
             fig.add_trace(go.Scatter(
                 x=df['date'],
@@ -163,7 +167,8 @@ def plot_normalized_actuals(data_dict, selected_indicators):
                 name=indicator,
                 marker=dict(size=6),
                 line=dict(width=1.5),
-                opacity=0.8
+                opacity=0.8,
+                hovertemplate="Date: %{x|%b %Y}<br>Normalized: %{y:.2f}<extra></extra>"
             ))
 
         except Exception as e:
@@ -189,7 +194,7 @@ def plot_normalized_actuals(data_dict, selected_indicators):
         ),
         yaxis=dict(
             gridcolor='#444444',
-            range=[0, 1]  # Fixed scale for comparison
+            range=[0, 1.05]  # Slightly above 1 for better visibility
         ),
         legend=dict(
             orientation="h",
