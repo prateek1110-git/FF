@@ -181,6 +181,79 @@ def create_correlation_heatmap(merged_df):
     )
     return fig
 
+def analyze_tier1_lag_correlation_streamlit(data_dict, min_periods=12, top_n=10, max_lag=12):
+    """Analyze and visualize lag correlations between indicators"""
+    processed = {}
+    for name, df in data_dict.items():
+        clean_df = preprocess_df(df)
+        if clean_df is not None:
+            processed[name] = clean_df
+
+    if not processed:
+        st.error("No valid data found.")
+        return
+
+    # Merge into one DataFrame
+    merged_df = None
+    for name, df in processed.items():
+        df = df.rename(columns={'value': name})
+        merged_df = df if merged_df is None else pd.merge(merged_df, df, on='date', how='outer')
+    merged_df = merged_df.set_index('date')
+
+    indicators = list(processed.keys())
+    heatmap_matrix = pd.DataFrame(index=indicators, columns=indicators, dtype=float)
+    annotations = pd.DataFrame(index=indicators, columns=indicators, dtype=str)
+    lag_corr_dict = {}
+
+    # Compute lag correlations
+    for i in range(len(indicators)):
+        for j in range(i + 1, len(indicators)):
+            ind1 = indicators[i]
+            ind2 = indicators[j]
+            s1 = merged_df[ind1]
+            s2 = merged_df[ind2]
+            lag_df = compute_lag_correlation(s1, s2, max_lag=max_lag, min_periods=min_periods)
+            if not lag_df.empty:
+                max_row = lag_df.iloc[lag_df['Correlation'].abs().argmax()]
+                corr = max_row['Correlation']
+                lag = int(max_row['Lag'])
+                lag_corr_dict[(ind1, ind2)] = (corr, lag)
+                heatmap_matrix.loc[ind1, ind2] = corr
+                heatmap_matrix.loc[ind2, ind1] = corr
+                annotation = f"{corr:.2f}\nLag:{lag}"
+                annotations.loc[ind1, ind2] = annotations.loc[ind2, ind1] = annotation
+
+    # Heatmap
+    st.subheader("📊 Lag Correlation Heatmap")
+    fig = go.Figure(data=go.Heatmap(
+        z=heatmap_matrix.astype(float),
+        x=heatmap_matrix.columns,
+        y=heatmap_matrix.index,
+        colorscale='RdBu',
+        zmin=-1,
+        zmax=1,
+        text=annotations,
+        hoverongaps=False
+    ))
+    fig.update_layout(
+        title="Maximum Correlation Coefficients and Lags",
+        xaxis_title="Indicator",
+        yaxis_title="Indicator",
+        height=600,
+        paper_bgcolor='#2d2d2d',
+        plot_bgcolor='#2d2d2d',
+        font=dict(color='white')
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+    # Top Pairs Table
+    top_pairs = sorted(lag_corr_dict.items(), key=lambda x: abs(x[1][0]), reverse=True)[:top_n]
+    st.subheader(f"🔝 Top {top_n} Correlated Pairs")
+    st.table(pd.DataFrame(
+        [(a, b, f"{corr:.2f}", lag) for (a, b), (corr, lag) in top_pairs],
+        columns=["Indicator 1", "Indicator 2", "Correlation", "Lag"]
+    ).style.format({"Correlation": "{:.2f}"}))
+
 def plot_seasonality(df, col_name):
     df = df.copy()
     df['month'] = df['date'].dt.month_name()
