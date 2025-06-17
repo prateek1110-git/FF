@@ -246,13 +246,18 @@ def analyze_tier1_lag_correlation_streamlit(data_dict, min_periods=12, top_n=10,
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    # Top Pairs Table
-    top_pairs = sorted(lag_corr_dict.items(), key=lambda x: abs(x[1][0]), reverse=True)[:top_n]
+    # Top Pairs Table - Simplified version
     st.subheader(f"🔝 Top {top_n} Correlated Pairs")
-    st.table(pd.DataFrame(
+    top_pairs = sorted(lag_corr_dict.items(), key=lambda x: abs(x[1][0]), reverse=True)[:top_n]
+    
+    # Create a simple DataFrame without styling
+    top_pairs_df = pd.DataFrame(
         [(a, b, f"{corr:.2f}", lag) for (a, b), (corr, lag) in top_pairs],
         columns=["Indicator 1", "Indicator 2", "Correlation", "Lag"]
-    ).style.format({"Correlation": "{:.2f}"}))
+    )
+    
+    # Display the table with Streamlit's native table display
+    st.dataframe(top_pairs_df, use_container_width=True)
 
 def plot_seasonality(df, col_name):
     df = df.copy()
