@@ -189,7 +189,7 @@ def plot_lead_lag(lag_df, indicator1, indicator2):
         name='Correlation',
         line=dict(color='#3498db', width=2),
         marker=dict(size=8)
-    )
+    ))
     
     max_corr_row = lag_df.iloc[lag_df['Correlation'].abs().argmax()]
     fig.add_vline(
