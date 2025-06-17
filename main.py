@@ -428,7 +428,7 @@ if uploaded_files:
             st.dataframe(data_dict[selected_indicator].head(), use_container_width=True)
         
         # Analysis sections
-                if analysis_type == "📈 Overview":
+        if analysis_type == "📈 Overview":
             st.header("📊 Data Overview")
             
             # Time series plot
