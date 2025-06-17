@@ -18,34 +18,65 @@ st.set_page_config(
     page_icon="📈"
 )
 
-# Custom CSS for styling
+# Dark Mode CSS
 st.markdown("""
 <style>
+    /* Main background */
     .stApp {
-        background-color: #f5f5f5;
+        background-color: #1a1a1a;
+        color: #ffffff;
     }
-    .st-b7 {
-        color: #2c3e50;
+    
+    /* Text colors */
+    .st-b7, .st-c0, .st-c1, .st-c2, .st-c3, .st-c4, .st-c5, .st-c6, .st-c7, .st-c8, .st-c9, .stMarkdown, .stText {
+        color: #ffffff !important;
     }
-    .css-18e3th9 {
-        padding: 2rem 5rem;
-    }
+    
+    /* Cards and containers */
     .metric-card {
-        background: white;
+        background: #2d2d2d;
         border-radius: 10px;
         padding: 15px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         margin-bottom: 20px;
+        color: #ffffff;
     }
+    
+    .tab-content {
+        background: #2d2d2d;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        color: #ffffff;
+    }
+    
+    /* Input widgets */
+    .stTextInput, .stNumberInput, .stSelectbox, .stMultiselect, .stSlider, .stRadio {
+        background-color: #2d2d2d !important;
+        color: #ffffff !important;
+        border-color: #444444 !important;
+    }
+    
+    /* Buttons */
     .st-eb {
-        background-color: #3498db !important;
+        background-color: #4a90e2 !important;
         color: white !important;
     }
-    .tab-content {
-        padding: 20px;
-        background: white;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    
+    /* Dataframes */
+    .stDataFrame {
+        background-color: #2d2d2d !important;
+        color: #ffffff !important;
+    }
+    
+    /* Sidebar */
+    .css-1d391kg, .css-1oe5cao {
+        background-color: #1a1a1a !important;
+    }
+    
+    /* Footer */
+    .footer {
+        color: #aaaaaa !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -141,7 +172,12 @@ def create_correlation_heatmap(merged_df):
         title='Indicator Correlation Matrix',
         xaxis_title="Indicators",
         yaxis_title="Indicators",
-        height=600
+        height=600,
+        paper_bgcolor='#2d2d2d',
+        plot_bgcolor='#2d2d2d',
+        font=dict(color='white'),
+        xaxis=dict(gridcolor='#444444'),
+        yaxis=dict(gridcolor='#444444')
     )
     return fig
 
@@ -158,7 +194,7 @@ def plot_seasonality(df, col_name):
         y=df[col_name],
         name='Distribution',
         boxmean=True,
-        marker_color='#3498db'
+        marker_color='#4a90e2'
     ), row=1, col=1)
     
     # Annual trend
@@ -175,7 +211,10 @@ def plot_seasonality(df, col_name):
     fig.update_layout(
         title=f'Seasonality Analysis: {col_name}',
         showlegend=False,
-        height=400
+        height=400,
+        paper_bgcolor='#2d2d2d',
+        plot_bgcolor='#2d2d2d',
+        font=dict(color='white')
     )
     return fig
 
@@ -187,7 +226,7 @@ def plot_lead_lag(lag_df, indicator1, indicator2):
         y=lag_df['Correlation'],
         mode='lines+markers',
         name='Correlation',
-        line=dict(color='#3498db', width=2),
+        line=dict(color='#4a90e2', width=2),
         marker=dict(size=8)
     ))
     
@@ -206,7 +245,10 @@ def plot_lead_lag(lag_df, indicator1, indicator2):
         yaxis_title='Correlation Coefficient',
         hovermode="x unified",
         height=500,
-        template="plotly_white"
+        template="plotly_dark",
+        paper_bgcolor='#2d2d2d',
+        plot_bgcolor='#2d2d2d',
+        font=dict(color='white')
     )
     return fig
 
@@ -279,7 +321,10 @@ if uploaded_files:
                         y=1.02,
                         xanchor="right",
                         x=1
-                    )
+                    ),
+                    paper_bgcolor='#2d2d2d',
+                    plot_bgcolor='#2d2d2d',
+                    font=dict(color='white')
                 )
                 st.plotly_chart(fig, use_container_width=True)
             
@@ -309,6 +354,11 @@ if uploaded_files:
                     dimensions=selected_for_scatter,
                     height=800,
                     title="Pairwise Relationships"
+                )
+                fig.update_layout(
+                    paper_bgcolor='#2d2d2d',
+                    plot_bgcolor='#2d2d2d',
+                    font=dict(color='white')
                 )
                 st.plotly_chart(fig, use_container_width=True)
         
@@ -376,7 +426,10 @@ if uploaded_files:
                 fig.update_layout(
                     height=800,
                     showlegend=False,
-                    title_text="Time Series Decomposition"
+                    title_text="Time Series Decomposition",
+                    paper_bgcolor='#2d2d2d',
+                    plot_bgcolor='#2d2d2d',
+                    font=dict(color='white')
                 )
                 
                 st.plotly_chart(fig, use_container_width=True)
@@ -434,7 +487,7 @@ if uploaded_files:
 else:
     st.info("ℹ️ Please upload one or more CSV files to begin analysis")
     st.image("https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80", 
-             use_column_width=True)
+             use_container_width=True)
 
 # Footer
 st.markdown("---")
@@ -442,7 +495,7 @@ st.markdown("""
 <style>
 .footer {
     font-size: 0.8rem;
-    color: #7f8c8d;
+    color: #aaaaaa !important;
     text-align: center;
     padding: 10px;
 }
