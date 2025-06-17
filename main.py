@@ -139,7 +139,69 @@ def preprocess_df(df, name=""):
     df = df.dropna(subset=['date', 'value'])
     df = df[['date', 'value']].rename(columns={'value': name or 'value'})
     return df
+def plot_normalized_actuals(data_dict, selected_indicators):
+    fig = go.Figure()
+    
+    for indicator in selected_indicators:
+        df = data_dict[indicator].copy()
+        
+        try:
+            # Min-max normalization to [0, 1]
+            actual_min = df['value'].min()
+            actual_max = df['value'].max()
+            
+            if actual_max == actual_min:
+                st.warning(f"No variation in values for {indicator} - skipping normalization")
+                continue
 
+            normalized = (df['value'] - actual_min) / (actual_max - actual_min)
+
+            fig.add_trace(go.Scatter(
+                x=df['date'],
+                y=normalized,
+                mode='lines+markers',
+                name=indicator,
+                marker=dict(size=6),
+                line=dict(width=1.5),
+                opacity=0.8
+            ))
+
+        except Exception as e:
+            st.error(f"Error processing {indicator}: {str(e)}")
+            continue
+
+    if len(fig.data) == 0:
+        st.warning("No valid data available for normalized plot")
+        return None
+
+    fig.update_layout(
+        title="Normalized Indicator Values (0 to 1 scale)",
+        xaxis_title="Date",
+        yaxis_title="Normalized Value",
+        hovermode="x unified",
+        height=500,
+        paper_bgcolor='#2d2d2d',
+        plot_bgcolor='#2d2d2d',
+        font=dict(color='white'),
+        xaxis=dict(
+            gridcolor='#444444',
+            tickformat='%Y-%m'
+        ),
+        yaxis=dict(
+            gridcolor='#444444',
+            range=[0, 1]  # Fixed scale for comparison
+        ),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        )
+    )
+    
+    return fig
+    
 def compute_lag_correlation(series_a, series_b, max_lag=12, min_periods=12):
     correlations = []
     for lag in range(-max_lag, max_lag + 1):
@@ -366,7 +428,7 @@ if uploaded_files:
             st.dataframe(data_dict[selected_indicator].head(), use_container_width=True)
         
         # Analysis sections
-        if analysis_type == "📈 Overview":
+                if analysis_type == "📈 Overview":
             st.header("📊 Data Overview")
             
             # Time series plot
@@ -377,6 +439,8 @@ if uploaded_files:
             )
             
             if indicators_to_plot:
+                # Original values plot
+                st.subheader("Original Values")
                 fig = go.Figure()
                 for indicator in indicators_to_plot:
                     fig.add_trace(go.Scatter(
@@ -405,6 +469,12 @@ if uploaded_files:
                     font=dict(color='white')
                 )
                 st.plotly_chart(fig, use_container_width=True)
+                
+                # Normalized plot
+                st.subheader("Normalized Comparison")
+                normalized_fig = plot_normalized_actuals(data_dict, indicators_to_plot)
+                if normalized_fig:
+                    st.plotly_chart(normalized_fig, use_container_width=True)
             
             # Correlation matrix
             st.header("🔗 Indicator Correlations")
