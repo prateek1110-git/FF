@@ -142,20 +142,29 @@ def preprocess_df(df, name=""):
     
 def plot_normalized_actuals(data_dict, selected_indicators):
     fig = go.Figure()
+    successful_plots = 0
     
     for indicator in selected_indicators:
         df = data_dict[indicator].copy()
         
         try:
-            # Check which value column exists
-            value_col = 'Actual' if 'Actual' in df.columns else 'value'
+            # Find the first numeric column that isn't the date
+            numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+            if 'date' in numeric_cols:
+                numeric_cols.remove('date')
+            
+            if not numeric_cols:
+                st.warning(f"No numeric value column found for {indicator} - skipping")
+                continue
+                
+            value_col = numeric_cols[0]  # Use first numeric column
             
             # Min-max normalization to [0, 1]
             actual_min = df[value_col].min()
             actual_max = df[value_col].max()
             
             if actual_max == actual_min:
-                st.warning(f"No variation in values for {indicator} - skipping normalization")
+                st.warning(f"No variation in values for {indicator} (all values = {actual_min}) - skipping")
                 continue
 
             normalized = (df[value_col] - actual_min) / (actual_max - actual_min)
@@ -164,19 +173,23 @@ def plot_normalized_actuals(data_dict, selected_indicators):
                 x=df['date'],
                 y=normalized,
                 mode='lines+markers',
-                name=indicator,
+                name=f"{indicator} ({value_col})",
                 marker=dict(size=6),
                 line=dict(width=1.5),
                 opacity=0.8,
-                hovertemplate="Date: %{x|%b %Y}<br>Normalized: %{y:.2f}<extra></extra>"
+                hovertemplate="Date: %{x|%b %Y}<br>Normalized: %{y:.2f}<br>Indicator: %{text}",
+                text=[f"{indicator}: {val:.2f}" for val in df[value_col]]
             ))
+            successful_plots += 1
 
         except Exception as e:
             st.error(f"Error processing {indicator}: {str(e)}")
             continue
 
-    if len(fig.data) == 0:
-        st.warning("No valid data available for normalized plot")
+    if successful_plots == 0:
+        st.warning("No valid data available for normalized plot. Check if:")
+        st.warning("- Files contain numeric value columns")
+        st.warning("- There is variation in the values (not all identical)")
         return None
 
     fig.update_layout(
