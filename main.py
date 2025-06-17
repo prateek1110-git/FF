@@ -7,18 +7,30 @@ from scipy import stats
 import plotly.express as px
 
 st.set_page_config(layout="wide")
-
 st.title("📊 Economic Indicator Analysis Dashboard")
 
-# Upload file
-uploaded_file = st.file_uploader("Upload a CSV file", type=['csv'])
+# Upload multiple files
+uploaded_files = st.file_uploader("Upload one or more CSV files", type=['csv'], accept_multiple_files=True)
 
-if uploaded_file:
-    df = pd.read_csv(uploaded_file)
-    st.subheader("Preview of Uploaded Data")
+if uploaded_files:
+    data_dict = {}
+    
+    # Parse all files
+    for file in uploaded_files:
+        df = pd.read_csv(file)
+        name = file.name
+        data_dict[name] = df
+
+    file_names = list(data_dict.keys())
+    
+    # Let user select file to analyze
+    selected_file = st.selectbox("Select a file to analyze", file_names)
+
+    df = data_dict[selected_file]
+    st.subheader(f"📄 Preview of {selected_file}")
     st.dataframe(df.head())
 
-    # Date parsing
+    # Proceed if date is available
     if 'Release Date' in df.columns:
         df['Release Date'] = pd.to_datetime(df['Release Date'], errors='coerce')
         df = df.dropna(subset=['Release Date'])
@@ -61,3 +73,6 @@ if uploaded_file:
                 lag_df = pd.DataFrame({"Lag": lags, "Correlation": correlations})
                 fig = px.line(lag_df, x='Lag', y='Correlation', title=f"Lead-Lag Correlation: {col1} vs {col2}")
                 st.plotly_chart(fig, use_container_width=True)
+
+    else:
+        st.warning("⏳ 'Release Date' column not found in the selected file.")
