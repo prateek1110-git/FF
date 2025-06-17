@@ -124,30 +124,20 @@ uploaded_files = st.file_uploader(
 # --- Core Functions ---
 def preprocess_df(df, name=""):
     df = df.copy()
-    original_columns = df.columns.tolist()  # Save original columns
-    df.columns = [str(c).strip().lower().replace(" ", "_") for c in df.columns]
+    df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
     
-    # Try to automatically detect date column
-    date_cols = [c for c in df.columns if 'date' in c or 'time' in c or 'period' in c or 'reference' in c]
-    if not date_cols:
-        return None
+    # Try to automatically detect date and value columns
+    date_cols = [c for c in df.columns if 'date' in c or 'time' in c or 'period' in c]
+    value_cols = [c for c in df.columns if 'value' in c or 'actual' in c or 'index' in c]
     
-    # Try to automatically detect value column (first numeric column that's not the date)
-    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-    if date_cols[0] in numeric_cols:
-        numeric_cols.remove(date_cols[0])
-    if not numeric_cols:
+    if not date_cols or not value_cols:
         return None
     
     df['date'] = pd.to_datetime(df[date_cols[0]], errors='coerce')
-    df['processed_value'] = pd.to_numeric(df[numeric_cols[0]], errors='coerce')
+    df['value'] = pd.to_numeric(df[value_cols[0]], errors='coerce')
     
-    df = df.dropna(subset=['date', 'processed_value'])
-    if len(df) == 0:
-        return None
-        
-    # Restore original column names while keeping processed columns
-    df.columns = original_columns + ['date', 'processed_value']
+    df = df.dropna(subset=['date', 'value'])
+    df = df[['date', 'value']].rename(columns={'value': name or 'value'})
     return df
     
 def plot_normalized_actuals(data_dict, selected_indicators):
@@ -421,7 +411,6 @@ def plot_lead_lag(lag_df, indicator1, indicator2):
     return fig
 
 # === Main App Logic ===
-# === Main App Logic ===
 if uploaded_files:
     # Process uploaded files
     data_dict = {}
@@ -431,9 +420,6 @@ if uploaded_files:
             name = file.name.replace(".csv", "")
             processed_df = preprocess_df(df, name)
             if processed_df is not None:
-                # Ensure unique column names
-                if name in processed_df.columns and name != 'date':
-                    processed_df = processed_df.rename(columns={name: f"{name}_value"})
                 data_dict[name] = processed_df
         except Exception as e:
             st.error(f"Error processing {file.name}: {str(e)}")
@@ -441,22 +427,14 @@ if uploaded_files:
     if not data_dict:
         st.warning("No valid data found in uploaded files. Please check your file formats.")
     else:
-        # Merge all data with proper handling of duplicate columns
+        # Merge all data
         merged_df = None
         for name, df in data_dict.items():
-            df = df.set_index('date')
-            if merged_df is None:
-                merged_df = df
-            else:
-                # Handle duplicate column names by adding suffixes
-                merged_df = merged_df.join(df, how='outer', rsuffix=f"_{name}")
-        
-        merged_df = merged_df.sort_index()
-    
-    
+            df = df.rename(columns={'value': name})
+            merged_df = df if merged_df is None else pd.merge(merged_df, df, on='date', how='outer')
+        merged_df = merged_df.set_index('date').sort_index()
         
         # Display data summary
-                # Display data summary
         with st.expander("📁 Dataset Overview", expanded=True):
             cols = st.columns(3)
             cols[0].metric("Total Indicators", len(data_dict))
@@ -465,13 +443,7 @@ if uploaded_files:
             cols[2].metric("Total Observations", len(merged_df))
             
             selected_indicator = st.selectbox("Select indicator to preview", list(data_dict.keys()))
-            
-            st.subheader("Raw Data Preview")
-            st.dataframe(data_dict[selected_indicator], use_container_width=True)
-            
-            st.subheader("Processed Time Series")
-            st.dataframe(data_dict[selected_indicator][['date', 'processed_value']].rename(
-                columns={'processed_value': 'value'}), use_container_width=True)
+            st.dataframe(data_dict[selected_indicator].head(), use_container_width=True)
         
         # Analysis sections
         if analysis_type == "📈 Overview":
