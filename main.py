@@ -124,20 +124,30 @@ uploaded_files = st.file_uploader(
 # --- Core Functions ---
 def preprocess_df(df, name=""):
     df = df.copy()
-    df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
+    original_columns = df.columns.tolist()  # Save original columns
+    df.columns = [str(c).strip().lower().replace(" ", "_") for c in df.columns]
     
-    # Try to automatically detect date and value columns
-    date_cols = [c for c in df.columns if 'date' in c or 'time' in c or 'period' in c]
-    value_cols = [c for c in df.columns if 'value' in c or 'actual' in c or 'index' in c]
+    # Try to automatically detect date column
+    date_cols = [c for c in df.columns if 'date' in c or 'time' in c or 'period' in c or 'reference' in c]
+    if not date_cols:
+        return None
     
-    if not date_cols or not value_cols:
+    # Try to automatically detect value column (first numeric column that's not the date)
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    if date_cols[0] in numeric_cols:
+        numeric_cols.remove(date_cols[0])
+    if not numeric_cols:
         return None
     
     df['date'] = pd.to_datetime(df[date_cols[0]], errors='coerce')
-    df['value'] = pd.to_numeric(df[value_cols[0]], errors='coerce')
+    df['processed_value'] = pd.to_numeric(df[numeric_cols[0]], errors='coerce')
     
-    df = df.dropna(subset=['date', 'value'])
-    df = df[['date', 'value']].rename(columns={'value': name or 'value'})
+    df = df.dropna(subset=['date', 'processed_value'])
+    if len(df) == 0:
+        return None
+        
+    # Restore original column names while keeping processed columns
+    df.columns = original_columns + ['date', 'processed_value']
     return df
     
 def plot_normalized_actuals(data_dict, selected_indicators):
@@ -412,12 +422,15 @@ def plot_lead_lag(lag_df, indicator1, indicator2):
 
 # === Main App Logic ===
 if uploaded_files:
-    # Process uploaded files
     data_dict = {}
+    raw_data_dict = {}  # To store original data
+    
     for file in uploaded_files:
         try:
             df = pd.read_csv(file)
             name = file.name.replace(".csv", "")
+            raw_data_dict[name] = df.copy()  # Store original data
+            
             processed_df = preprocess_df(df, name)
             if processed_df is not None:
                 data_dict[name] = processed_df
@@ -435,6 +448,7 @@ if uploaded_files:
         merged_df = merged_df.set_index('date').sort_index()
         
         # Display data summary
+                # Display data summary
         with st.expander("📁 Dataset Overview", expanded=True):
             cols = st.columns(3)
             cols[0].metric("Total Indicators", len(data_dict))
@@ -443,7 +457,13 @@ if uploaded_files:
             cols[2].metric("Total Observations", len(merged_df))
             
             selected_indicator = st.selectbox("Select indicator to preview", list(data_dict.keys()))
-            st.dataframe(data_dict[selected_indicator].head(), use_container_width=True)
+            
+            st.subheader("Raw Data Preview")
+            st.dataframe(data_dict[selected_indicator], use_container_width=True)
+            
+            st.subheader("Processed Time Series")
+            st.dataframe(data_dict[selected_indicator][['date', 'processed_value']].rename(
+                columns={'processed_value': 'value'}), use_container_width=True)
         
         # Analysis sections
         if analysis_type == "📈 Overview":
