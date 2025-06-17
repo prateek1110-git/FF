@@ -440,7 +440,7 @@ if uploaded_files:
             cols[0].metric("Total Indicators", len(data_dict))
             cols[1].metric("Time Period", 
                           f"{merged_df.index.min().strftime('%Y-%m-%d')} to {merged_df.index.max().strftime('%Y-%m-%d')}")
-            cols[2].metric("Total Observations", len(merged_df))
+            
             
             selected_indicator = st.selectbox("Select indicator to preview", list(data_dict.keys()))
             st.dataframe(data_dict[selected_indicator].head(), use_container_width=True)
