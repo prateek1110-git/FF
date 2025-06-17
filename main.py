@@ -71,7 +71,7 @@ def create_correlation_heatmap(merged_df):
         zmax=1,
         hoverongaps=False,
         colorbar=dict(title='Correlation')
-    )
+    ))
     fig.update_layout(
         title='Indicator Correlation Matrix',
         xaxis_title="Indicators",
