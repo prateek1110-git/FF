@@ -421,18 +421,19 @@ def plot_lead_lag(lag_df, indicator1, indicator2):
     return fig
 
 # === Main App Logic ===
+# === Main App Logic ===
 if uploaded_files:
+    # Process uploaded files
     data_dict = {}
-    raw_data_dict = {}  # To store original data
-    
     for file in uploaded_files:
         try:
             df = pd.read_csv(file)
             name = file.name.replace(".csv", "")
-            raw_data_dict[name] = df.copy()  # Store original data
-            
             processed_df = preprocess_df(df, name)
             if processed_df is not None:
+                # Ensure unique column names
+                if name in processed_df.columns and name != 'date':
+                    processed_df = processed_df.rename(columns={name: f"{name}_value"})
                 data_dict[name] = processed_df
         except Exception as e:
             st.error(f"Error processing {file.name}: {str(e)}")
@@ -440,12 +441,19 @@ if uploaded_files:
     if not data_dict:
         st.warning("No valid data found in uploaded files. Please check your file formats.")
     else:
-        # Merge all data
+        # Merge all data with proper handling of duplicate columns
         merged_df = None
         for name, df in data_dict.items():
-            df = df.rename(columns={'value': name})
-            merged_df = df if merged_df is None else pd.merge(merged_df, df, on='date', how='outer')
-        merged_df = merged_df.set_index('date').sort_index()
+            df = df.set_index('date')
+            if merged_df is None:
+                merged_df = df
+            else:
+                # Handle duplicate column names by adding suffixes
+                merged_df = merged_df.join(df, how='outer', rsuffix=f"_{name}")
+        
+        merged_df = merged_df.sort_index()
+    
+    
         
         # Display data summary
                 # Display data summary
