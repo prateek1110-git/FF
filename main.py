@@ -541,53 +541,6 @@ if uploaded_files:
                 use_container_width=True
             )
             
-            # Decomposition plot
-            st.subheader("Time Series Decomposition")
-            try:
-                from statsmodels.tsa.seasonal import seasonal_decompose
-                
-                decomposition = seasonal_decompose(
-                    merged_df[selected_indicator].dropna(),
-                    period=12,
-                    model='additive'
-                )
-                
-                fig = make_subplots(
-                    rows=4, cols=1,
-                    subplot_titles=("Observed", "Trend", "Seasonal", "Residual")
-                )
-                
-                fig.add_trace(
-                    go.Scatter(
-                        x=decomposition.observed.index,
-                        y=decomposition.observed,
-                        name='Observed'
-                    ), row=1, col=1
-                )
-                
-                fig.add_trace(
-                    go.Scatter(
-                        x=decomposition.trend.index,
-                        y=decomposition.trend,
-                        name='Trend'
-                    ), row=2, col=1
-                )
-                
-                fig.add_trace(
-                    go.Scatter(
-                        x=decomposition.seasonal.index,
-                        y=decomposition.seasonal,
-                        name='Seasonal'
-                    ), row=3, col=1
-                )
-                
-                fig.add_trace(
-                    go.Scatter(
-                        x=decomposition.resid.index,
-                        y=decomposition.resid,
-                        name='Residual'
-                    ), row=4, col=1
-                )
                 
                 fig.update_layout(
                     height=800,
