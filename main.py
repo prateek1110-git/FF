@@ -541,19 +541,7 @@ if uploaded_files:
                 use_container_width=True
             )
             
-                
-                fig.update_layout(
-                    height=800,
-                    showlegend=False,
-                    title_text="Time Series Decomposition",
-                    paper_bgcolor='#2d2d2d',
-                    plot_bgcolor='#2d2d2d',
-                    font=dict(color='white')
-                )
-                
-                st.plotly_chart(fig, use_container_width=True)
-            except Exception as e:
-                st.warning(f"Could not perform decomposition: {str(e)}")
+
         
         elif analysis_type == "⏩ Lead-Lag":
             st.header("⏱️ Lead-Lag Analysis")
